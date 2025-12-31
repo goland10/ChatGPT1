@@ -577,3 +577,256 @@ Next we will:
 2️⃣ Confirm when repo is pushed
 
 I’ll generate the **GKE module + GitHub Actions pipeline** next.
+
+terraform init ok
+repo is pushed
+
+Excellent 👌
+You’re exactly where a real project should be at this stage.
+
+We’ll now do **Step 2**:
+✅ Add a **production-style GKE module**
+✅ Keep costs low
+✅ Prepare it for **GitHub Actions**
+❌ No apps yet (discipline matters)
+
+---
+
+# 🚀 Step 2 — GKE Module (Professional, Recruiter-Grade)
+
+## 🎯 What this step proves
+
+* You can design GKE **properly**, not “click-next”
+* You understand **Workload Identity, node pools, autoscaling**
+* You know how to separate infra concerns
+
+---
+
+## 1️⃣ GKE module — `modules/gke/main.tf`
+
+```hcl
+resource "google_container_cluster" "this" {
+  name     = var.cluster_name
+  location = var.region
+
+  network    = var.network
+  subnetwork = var.subnetwork
+
+  remove_default_node_pool = true
+  initial_node_count       = 1
+
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  ip_allocation_policy {
+    cluster_secondary_range_name  = var.pods_range_name
+    services_secondary_range_name = var.services_range_name
+  }
+
+  release_channel {
+    channel = "REGULAR"
+  }
+
+  logging_config {
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+  }
+
+  monitoring_config {
+    enable_components = ["SYSTEM_COMPONENTS"]
+  }
+}
+```
+
+---
+
+## 2️⃣ Node pool — `modules/gke/node_pool.tf`
+
+```hcl
+resource "google_container_node_pool" "primary" {
+  name       = "primary-pool"
+  location   = var.region
+  cluster    = google_container_cluster.this.name
+  node_count = 1
+
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 2
+  }
+
+  node_config {
+    machine_type = "e2-standard-2"
+
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+
+    labels = {
+      env = var.environment
+    }
+
+    tags = ["gke-node"]
+
+    shielded_instance_config {
+      enable_secure_boot = true
+      enable_integrity_monitoring = true
+    }
+  }
+}
+```
+
+✔ Cost-safe
+✔ Autoscaling
+✔ Security-aware
+✔ Recruiter-approved
+
+---
+
+## 3️⃣ GKE variables — `modules/gke/variables.tf`
+
+```hcl
+variable "project_id" {
+  type = string
+}
+
+variable "region" {
+  type = string
+}
+
+variable "cluster_name" {
+  type = string
+}
+
+variable "environment" {
+  type = string
+}
+
+variable "network" {
+  type = string
+}
+
+variable "subnetwork" {
+  type = string
+}
+
+variable "pods_range_name" {
+  type = string
+}
+
+variable "services_range_name" {
+  type = string
+}
+```
+
+---
+
+## 4️⃣ Call GKE module — `envs/dev/main.tf`
+
+Update it like this:
+
+```hcl
+locals {
+  environment  = "dev"
+  cluster_name = "gke-${local.environment}-me-west1"
+}
+
+module "network" {
+  source = "../../modules/network"
+  region = var.region
+}
+
+module "gke" {
+  source = "../../modules/gke"
+
+  project_id = var.project_id
+  region     = var.region
+
+  cluster_name = local.cluster_name
+  environment  = local.environment
+
+  network    = module.network.vpc_id
+  subnetwork = module.network.subnet_id
+
+  pods_range_name     = "pods"
+  services_range_name = "services"
+}
+```
+
+---
+
+## 5️⃣ Add outputs (important for professionalism)
+
+### `modules/network/outputs.tf`
+
+```hcl
+output "vpc_id" {
+  value = google_compute_network.vpc.id
+}
+
+output "subnet_id" {
+  value = google_compute_subnetwork.subnet.id
+}
+```
+
+### `envs/dev/outputs.tf`
+
+```hcl
+output "cluster_name" {
+  value = module.gke.cluster_name
+}
+```
+
+(Add output in GKE module if needed.)
+
+---
+
+## 6️⃣ Validate (do NOT apply yet)
+
+Run:
+
+```bash
+cd terraform/envs/dev
+terraform init
+terraform validate
+terraform plan
+```
+
+✔ Plan should succeed
+✔ No resources created yet
+✔ This is exactly what CI will do
+
+---
+
+## 🧠 Why this looks strong to recruiters
+
+They see:
+
+* Modular Terraform
+* Workload Identity
+* No default node pool
+* Autoscaling
+* Shielded nodes
+* Clean locals vs variables usage
+
+This is **mid-level → senior-leaning infrastructure code**.
+
+---
+
+## 🔜 Next step (very important)
+
+Next we will add **GitHub Actions** to:
+
+* Run `terraform fmt`
+* Run `terraform validate`
+* Run `terraform plan` on PRs
+
+This is where your repo **starts looking like a real team project**.
+
+---
+
+### 👉 Reply with:
+
+1️⃣ `terraform plan` result (OK / error)
+2️⃣ Confirm you’re ready to add **GitHub Actions**
+
+I’ll generate the **exact CI pipeline YAML** next.
