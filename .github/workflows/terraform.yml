@@ -34,7 +34,7 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
           workload_identity_provider: projects/${{env.PROJECT_NUMBER}}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-          #service_account: github-terraform@chatgpt1-goland1.iam.gserviceaccount.com
+          service_account: github-terraform@chatgpt1-goland1.iam.gserviceaccount.com
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
