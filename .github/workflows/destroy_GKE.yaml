@@ -3,6 +3,14 @@ name: Terraform GKE Destroy
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod      
       confirm:
         description: "Type DESTROY to confirm infrastructure deletion"
         required: true
